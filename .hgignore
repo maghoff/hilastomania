@@ -5,3 +5,4 @@ build
 *~
 .lock-wafbuild
 test-box2d-ymse.*
+Makefile
