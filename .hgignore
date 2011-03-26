@@ -1,0 +1,7 @@
+syntax: glob
+.waf*
+build
+*.pyc
+*~
+.lock-wafbuild
+test-box2d-ymse.*

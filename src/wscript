@@ -1,0 +1,13 @@
+#!/bin/env python
+# -*- coding: utf-8 -*-
+
+def build(bld):
+    sources = [
+        'main.cpp',
+    ]
+
+    obj = bld.program(
+        source=sources,
+        target='test-box2d-ymse',
+        defines=[],
+    )
