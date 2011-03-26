@@ -1,25 +1,34 @@
 #!/bin/env python
 # -*- coding: utf-8 -*-
 
-import configurators
-
 
 def options(opt):
 	opt.load('compiler_cc')
 	opt.load('compiler_cxx')
 
 
-def msvc_initial_setup(conf):
-	conf.env['MSVC_VERSIONS'] = ['msvc 9.0']
-	conf.env['MSVC_TARGETS'] = ['x86']
+def msvc_initial_setup(env):
+	env['MSVC_VERSIONS'] = ['msvc 9.0']
+	env['MSVC_TARGETS'] = ['x86']
+
+
+def configure_ymse(debug_env, release_env):
+	import os
+	YMSE_PATH = os.environ['YMSE_PATH']
+
+	release_env.INCLUDES_ymse = debug_env.INCLUDES_ymse = [YMSE_PATH]
+	release_env.LIB_ymse = debug_env.LIB_ymse = ['ymse', 'SDL', 'GL']
+	debug_env.LIBPATH_ymse = [os.path.join(YMSE_PATH, 'debug/src')]
+	release_env.LIBPATH_ymse = [os.path.join(YMSE_PATH, 'release/src')]
 
 
 def configure(conf):
-	msvc_initial_setup(conf)
+	msvc_initial_setup(conf.env)
 
 	conf.load('compiler_cc')
 	conf.load('compiler_cxx')
 
+	import configurators
 	cc = configurators.get_configurator(conf)
 
 	cc.sane_default(conf.env)
@@ -38,6 +47,8 @@ def configure(conf):
 	cc.link_time_code_generation(release_env)
 	conf.setenv('release', env = release_env)
 
+	configure_ymse(debug_env, release_env)
+
 
 # All of the following boiler plate is recommended (demanded) by the waf book for enabling build variants:
 
@@ -49,10 +60,9 @@ def build(bld):
 
 from waflib.Build import BuildContext, CleanContext, InstallContext, UninstallContext
 
-for x in 'debug release'.split():
+for x in ['debug', 'release']:
 	for y in (BuildContext, CleanContext, InstallContext, UninstallContext):
 		name = y.__name__.replace('Context','').lower()
 		class tmp(y):
 			cmd = name + '_' + x
 			variant = x
-

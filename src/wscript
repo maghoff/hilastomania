@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 
 def build(bld):
-    sources = [
-        'main.cpp',
-    ]
+	sources = [
+		'main.cpp',
+	]
 
-    obj = bld.program(
-        source=sources,
-        target='test-box2d-ymse',
-        defines=[],
-    )
+	obj = bld.program(
+		source=sources,
+		target='test-box2d-ymse',
+		defines=[],
+		use=['ymse'],
+	)
