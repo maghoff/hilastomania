@@ -1,11 +1,14 @@
 #include <ymse/gl.h>
 #include <iostream>
+#include <boost/bind.hpp>
 #include <ymse/sdl_core.hpp>
 #include <ymse/game.hpp>
 #include <ymse/reshaper.hpp>
 #include <ymse/matrix.hpp>
 #include <ymse/matrix3d.hpp>
 #include <ymse/vec.hpp>
+#include <ymse/bindable_keyboard_handler.hpp>
+#include <ymse/keycodes.hpp>
 
 typedef ymse::vec<2, GLfloat> vec2f;
 typedef ymse::vec<3, GLfloat> vec3f;
@@ -54,9 +57,13 @@ int main(int argc, char** argv) {
 	core.init(argc, argv);
 
 	Game game;
+	ymse::bindable_keyboard_handler keyboard;
+
+	keyboard.bind(ymse::KEY_Q, boost::bind(&ymse::sdl_core::stop, &core, 0));
 
 	core.set_game_object(&game);
 	core.set_reshaper_object(&game);
+	core.set_keyboard_handler(&keyboard);
 
 	return core.run();
 }
