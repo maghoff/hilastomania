@@ -13,13 +13,23 @@ def msvc_initial_setup(env):
 
 
 def configure_ymse(debug_env, release_env):
-	import os
+	import os, platform
 	YMSE_PATH = os.environ['YMSE_PATH']
 
 	release_env.INCLUDES_ymse = debug_env.INCLUDES_ymse = [YMSE_PATH]
-	release_env.LIB_ymse = debug_env.LIB_ymse = ['ymse', 'SDL', 'GL']
+	release_env.LIB_ymse = debug_env.LIB_ymse = ['ymse']
 	debug_env.LIBPATH_ymse = [os.path.join(YMSE_PATH, 'debug/src')]
 	release_env.LIBPATH_ymse = [os.path.join(YMSE_PATH, 'release/src')]
+
+	if platform.system() == 'Darwin':
+		frameworks = ['OpenGL', 'SDL', 'Cocoa']
+		flags = sum((['-framework', x] for x in frameworks), [])
+		release_env.LINKFLAGS_ymse = flags
+		debug_env.LINKFLAGS_ymse = flags
+	else:
+		libs = ['GL', 'SDL']
+		release_env.LIB_ymse.extend(libs)
+		debug_env.LIB_ymse.extend(libs)
 
 
 def configure(conf):
