@@ -9,10 +9,6 @@
 #include <ymse/matrix2d_homogenous.hpp>
 #include <ymse/vec.hpp>
 
-typedef ymse::vec<2, GLfloat> vec2f;
-typedef ymse::vec<3, GLfloat> vec3f;
-using ymse::matrix33f;
-
 
 class Game : public ymse::game {
 	ymse::bindable_keyboard_handler keyboard;
@@ -34,9 +30,11 @@ public:
 	}
 
 	void render() {
+		using namespace ymse;
+		using namespace ymse::matrix2d::homogenous;
+
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-		using namespace ymse::matrix2d::homogenous;
 		matrix33f m = box.get_transformation() * rotate(ang) * scale(0.5);
 
 		vec2f pts[] = {
