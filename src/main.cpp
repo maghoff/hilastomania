@@ -3,12 +3,11 @@
 #include <boost/bind.hpp>
 #include <ymse/sdl_core.hpp>
 #include <ymse/game.hpp>
-#include <ymse/glviewport_reshaper.hpp>
+#include <ymse/bindable_keyboard_handler.hpp>
+#include <ymse/keycodes.hpp>
 #include <ymse/box_reshaper.hpp>
 #include <ymse/matrix2d_homogenous.hpp>
 #include <ymse/vec.hpp>
-#include <ymse/bindable_keyboard_handler.hpp>
-#include <ymse/keycodes.hpp>
 
 typedef ymse::vec<2, GLfloat> vec2f;
 typedef ymse::vec<3, GLfloat> vec3f;
@@ -17,29 +16,21 @@ using ymse::matrix33f;
 
 class Game : public ymse::game {
 	ymse::bindable_keyboard_handler keyboard;
-
 	ymse::box_reshaper box;
-	ymse::glViewport_reshaper viewport;
 
 	double ang;
 
 public:
-
-	Game() :
-		viewport(&box)
-	{
-	}
-
-	~Game() {
-	}
+	Game() { }
+	~Game() { }
 
 	void attach_to_core(ymse::sdl_core& core) {
 		keyboard.bind_pressed(ymse::KEY_Q, boost::bind(&ymse::sdl_core::stop, &core, 0));
 		keyboard.bind_pressed(ymse::KEY_F, boost::bind(&ymse::sdl_core::toggle_fullscreen, &core));
 
 		core.set_game_object(this);
-		core.set_reshaper_object(&viewport);
 		core.set_keyboard_handler(&keyboard);
+		core.set_reshaper_object(&box);
 	}
 
 	void render() {
