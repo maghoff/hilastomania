@@ -12,6 +12,9 @@
 
 #include <Box2D.h>
 
+using namespace ymse;
+using namespace ymse::matrix2d::homogenous;
+
 
 class Game : public ymse::game {
 	ymse::bindable_keyboard_handler keyboard;
@@ -21,6 +24,7 @@ class Game : public ymse::game {
 
 	b2World world;
 	b2Body *groundBody, *wheel1, *wheel2, *chassis;
+	b2RevoluteJoint *hinge1, *hinge2;
 
 	void createGroundBox() {
 		b2BodyDef groundBodyDef;
@@ -41,13 +45,13 @@ class Game : public ymse::game {
 		bodyDef.angle = 0;
 		b2Body* body = world.CreateBody(&bodyDef);
 
-		b2PolygonShape dynamicBox;
-		dynamicBox.SetAsBox(0.5, 0.5);
+		b2CircleShape shape;
+		shape.m_radius = 0.5;
 
 		b2FixtureDef fixtureDef;
-		fixtureDef.shape = &dynamicBox;
+		fixtureDef.shape = &shape;
 		fixtureDef.density = 3;
-		fixtureDef.friction = 0.3;
+		fixtureDef.friction = 10.3;
 
 		body->CreateFixture(&fixtureDef);
 
@@ -94,7 +98,7 @@ class Game : public ymse::game {
 		return body;
 	}
 
-	void connectWheel(b2Body* chassis, b2Body* wheel, const b2Vec2& pos) {
+	b2RevoluteJoint* connectWheel(b2Body* chassis, b2Body* wheel, const b2Vec2& pos) {
 		const b2Vec2& wpos = wheel->GetWorldCenter();
 
 		b2Body* hinge = createHinge(wpos.x, wpos.y);
@@ -117,7 +121,12 @@ class Game : public ymse::game {
 
 		b2RevoluteJointDef rDef;
 		rDef.Initialize(hinge, wheel, wpos);
-		world.CreateJoint(&rDef);
+		rDef.lowerAngle = 0;
+		rDef.upperAngle = 0;
+		rDef.motorSpeed = 0;
+		rDef.maxMotorTorque = 10;
+		rDef.enableLimit = false;
+		return (b2RevoluteJoint*)world.CreateJoint(&rDef);
 	}
 
 	void createBike() {
@@ -127,8 +136,13 @@ class Game : public ymse::game {
 		wheel2 = createWheel( 2, 3);
 		chassis = createChassis(0, 5);
 
-		connectWheel(chassis, wheel1, b2Vec2(-1, 4));
-		connectWheel(chassis, wheel2, b2Vec2( 1, 4));
+		hinge1 = connectWheel(chassis, wheel1, b2Vec2(-1, 4));
+		hinge2 = connectWheel(chassis, wheel2, b2Vec2( 1, 4));
+	}
+
+	void breaks(bool on) {
+		hinge1->EnableLimit(on);
+		hinge2->EnableLimit(on);
 	}
 
 public:
@@ -136,10 +150,15 @@ public:
 		acc(keyboard, ymse::KEY_UP),
 		world(b2Vec2(0, -10), true)
 	{
-		box.set_box(-20, -1, 20, 10);
+		box.set_box(-10, -1, 70, 10);
 
 		createGroundBox();
 		createBike();
+
+		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&b2Body::ApplyAngularImpulse, chassis, 100));
+		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&b2Body::ApplyAngularImpulse, chassis, -100));
+
+		keyboard.bind(ymse::KEY_DOWN, boost::bind(&Game::breaks, this, _1));
 	}
 
 	~Game() { }
@@ -153,21 +172,7 @@ public:
 		core.set_reshaper_object(&box);
 	}
 
-	void renderBody(const ymse::matrix33f& transformation, b2Body* body) {
-		using namespace ymse;
-		using namespace ymse::matrix2d::homogenous;
-
-		matrix33f m =
-			transformation *
-			translate(body->GetPosition().x, body->GetPosition().y) *
-			rotate(-body->GetAngle())
-		;
-
-		if (body->GetFixtureList() == 0) return;
-		if (body->GetFixtureList()->GetType() != b2Shape::e_polygon) return;
-
-		b2PolygonShape* polygon = ((b2PolygonShape*)body->GetFixtureList()->GetShape());
-
+	void renderPolygon(b2PolygonShape* polygon, const ymse::matrix33f& m) {
 		glBegin(GL_LINE_LOOP);
 		for (int i=0; i<polygon->GetVertexCount(); ++i) {
 			const b2Vec2& v = polygon->GetVertex(i);
@@ -175,6 +180,38 @@ public:
 			glVertex2f(v_tr[0], v_tr[1]);
 		}
 		glEnd();
+	}
+
+	void renderCircle(b2CircleShape* circle, const ymse::matrix33f& m) {
+		glBegin(GL_LINE_STRIP);
+		float r = circle->m_radius;
+
+		vec3f center = m * vec3f(0, 0, 1);
+		glVertex2f(center[0], center[1]);
+
+		const int n = 50;
+		for (int i=0; i<=n; ++i) {
+			float a = i * 2.*M_PI / (float)n;
+			vec3f v_tr = m * vec3f(cos(a)*r, sin(a)*r, 1);
+			glVertex2f(v_tr[0], v_tr[1]);
+		}
+
+		glEnd();
+	}
+
+	void renderBody(const ymse::matrix33f& transformation, b2Body* body) {
+		matrix33f m =
+			transformation *
+			translate(body->GetPosition().x, body->GetPosition().y) *
+			rotate(-body->GetAngle())
+		;
+
+		for (b2Fixture* f = body->GetFixtureList(); f != 0; f = f->GetNext()) {
+			b2Shape* sh = f->GetShape();
+			b2Shape::Type t = sh->GetType();
+			if (t == b2Shape::e_polygon) renderPolygon((b2PolygonShape*)sh, m);
+			else if (t == b2Shape::e_circle) renderCircle((b2CircleShape*)sh, m);
+		}
 	}
 
 	void render() {
