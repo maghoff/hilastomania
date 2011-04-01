@@ -20,7 +20,7 @@ class Game : public ymse::game {
 	ymse::key acc;
 
 	b2World world;
-	b2Body *groundBody, *body;
+	b2Body *groundBody, *wheel1, *wheel2, *chassis;
 
 	void createGroundBox() {
 		b2BodyDef groundBodyDef;
@@ -34,12 +34,32 @@ class Game : public ymse::game {
 		groundBody->CreateFixture(&groundBox, 0);
 	}
 
-	void createDynamicBody() {
+	b2Body* createWheel(float x, float y) {
 		b2BodyDef bodyDef;
 		bodyDef.type = b2_dynamicBody;
-		bodyDef.position.Set(0, 4);
+		bodyDef.position.Set(x, y);
 		bodyDef.angle = 1.1;
-		body = world.CreateBody(&bodyDef);
+		b2Body* body = world.CreateBody(&bodyDef);
+
+		b2PolygonShape dynamicBox;
+		dynamicBox.SetAsBox(0.5, 0.5);
+
+		b2FixtureDef fixtureDef;
+		fixtureDef.shape = &dynamicBox;
+		fixtureDef.density = 1;
+		fixtureDef.friction = 0.3;
+
+		body->CreateFixture(&fixtureDef);
+
+		return body;
+	}
+
+	b2Body* createChassis(float x, float y) {
+		b2BodyDef bodyDef;
+		bodyDef.type = b2_dynamicBody;
+		bodyDef.position.Set(x, y);
+		bodyDef.angle = 1.1;
+		b2Body* body = world.CreateBody(&bodyDef);
 
 		b2PolygonShape dynamicBox;
 		dynamicBox.SetAsBox(1, 1);
@@ -50,6 +70,14 @@ class Game : public ymse::game {
 		fixtureDef.friction = 0.3;
 
 		body->CreateFixture(&fixtureDef);
+
+		return body;
+	}
+
+	void createBike() {
+		wheel1 = createWheel(-1, 4);
+		wheel2 = createWheel( 1, 4);
+		chassis = createChassis(0, 5);
 	}
 
 public:
@@ -60,7 +88,7 @@ public:
 		box.set_box(-1, 0, 1, 10);
 
 		createGroundBox();
-		createDynamicBody();
+		createBike();
 	}
 
 	~Game() { }
@@ -74,37 +102,39 @@ public:
 		core.set_reshaper_object(&box);
 	}
 
-	void render() {
+	void renderBody(const ymse::matrix33f& transformation, b2Body* body) {
 		using namespace ymse;
 		using namespace ymse::matrix2d::homogenous;
 
-		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
-
 		matrix33f m =
-			box.get_transformation() *
+			transformation *
 			translate(body->GetPosition().x, body->GetPosition().y) *
 			rotate(-body->GetAngle())
 		;
 
-		vec2f pts[] = {
-			vec2f(-1, -1),
-			vec2f( 1, -1),
-			vec2f( 1,  1),
-			vec2f(-1,  1)
-		};
+		b2PolygonShape* polygon = ((b2PolygonShape*)body->GetFixtureList()->GetShape());
 
 		glBegin(GL_LINE_LOOP);
-		for (unsigned i=0; i<sizeof(pts)/sizeof(*pts); ++i) {
-			vec3f v = m * vec3f(pts[i][0], pts[i][1], 1);
-			glVertex2f(v[0], v[1]);
+		for (int i=0; i<polygon->GetVertexCount(); ++i) {
+			const b2Vec2& v = polygon->GetVertex(i);
+			vec3f v_tr = m * vec3f(v.x, v.y, 1);
+			glVertex2f(v_tr[0], v_tr[1]);
 		}
 		glEnd();
+	}
+
+	void render() {
+		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+
+		renderBody(box.get_transformation(), wheel1);
+		renderBody(box.get_transformation(), wheel2);
+		renderBody(box.get_transformation(), chassis);
 	}
 
 	void tick_10ms() {
 		//ang += 0.01;
 
-		if (acc.val()) body->ApplyTorque(-50.);
+		if (acc.val()) wheel1->ApplyTorque(-50.);
 
 		float32 timeStep = 10. / 1000.;
 		int32 velocityIterations = 10;
