@@ -38,7 +38,7 @@ class Game : public ymse::game {
 		b2BodyDef bodyDef;
 		bodyDef.type = b2_dynamicBody;
 		bodyDef.position.Set(x, y);
-		bodyDef.angle = 1.1;
+		bodyDef.angle = 0;
 		b2Body* body = world.CreateBody(&bodyDef);
 
 		b2PolygonShape dynamicBox;
@@ -46,7 +46,27 @@ class Game : public ymse::game {
 
 		b2FixtureDef fixtureDef;
 		fixtureDef.shape = &dynamicBox;
-		fixtureDef.density = 1;
+		fixtureDef.density = 3;
+		fixtureDef.friction = 0.3;
+
+		body->CreateFixture(&fixtureDef);
+
+		return body;
+	}
+
+	b2Body* createHinge(float x, float y) {
+		b2BodyDef bodyDef;
+		bodyDef.type = b2_dynamicBody;
+		bodyDef.position.Set(x, y);
+		bodyDef.angle = 0;
+		b2Body* body = world.CreateBody(&bodyDef);
+
+		b2PolygonShape dynamicBox;
+		dynamicBox.SetAsBox(0.1, 0.1);
+
+		b2FixtureDef fixtureDef;
+		fixtureDef.shape = &dynamicBox;
+		fixtureDef.density = 15;
 		fixtureDef.friction = 0.3;
 
 		body->CreateFixture(&fixtureDef);
@@ -58,26 +78,57 @@ class Game : public ymse::game {
 		b2BodyDef bodyDef;
 		bodyDef.type = b2_dynamicBody;
 		bodyDef.position.Set(x, y);
-		bodyDef.angle = 1.1;
+		bodyDef.angle = 0;
 		b2Body* body = world.CreateBody(&bodyDef);
 
 		b2PolygonShape dynamicBox;
-		dynamicBox.SetAsBox(1, 1);
+		dynamicBox.SetAsBox(2, 1);
 
 		b2FixtureDef fixtureDef;
 		fixtureDef.shape = &dynamicBox;
-		fixtureDef.density = 1;
-		fixtureDef.friction = 0.3;
+		fixtureDef.density = 2;
+		fixtureDef.friction = 0.003;
 
 		body->CreateFixture(&fixtureDef);
 
 		return body;
 	}
 
+	void connectWheel(b2Body* chassis, b2Body* wheel, const b2Vec2& pos) {
+		const b2Vec2& wpos = wheel->GetWorldCenter();
+
+		b2Body* hinge = createHinge(wpos.x, wpos.y);
+
+		b2DistanceJointDef jointDef;
+		jointDef.Initialize(hinge, chassis, wpos, pos);
+		jointDef.collideConnected = false;
+		jointDef.frequencyHz = 7.f;
+		jointDef.dampingRatio = 0.1;
+		world.CreateJoint(&jointDef);
+
+		b2PrismaticJointDef pDef;
+		pDef.Initialize(hinge, chassis, wpos, pos - wpos);
+		pDef.lowerTranslation = -5.0f;
+		pDef.upperTranslation = 2.5f;
+		pDef.enableLimit = false;
+		pDef.motorSpeed = 0.f;
+		pDef.enableMotor = false;
+		world.CreateJoint(&pDef);
+
+		b2RevoluteJointDef rDef;
+		rDef.Initialize(hinge, wheel, wpos);
+		world.CreateJoint(&rDef);
+	}
+
 	void createBike() {
-		wheel1 = createWheel(-1, 4);
-		wheel2 = createWheel( 1, 4);
+		createWheel(-2, 1);
+
+		wheel1 = createWheel(-2, 3);
+		wheel2 = createWheel( 2, 3);
 		chassis = createChassis(0, 5);
+
+		connectWheel(chassis, wheel1, b2Vec2(-1, 4));
+		connectWheel(chassis, wheel2, b2Vec2( 1, 4));
 	}
 
 public:
@@ -85,7 +136,7 @@ public:
 		acc(keyboard, ymse::KEY_UP),
 		world(b2Vec2(0, -10), true)
 	{
-		box.set_box(-1, 0, 1, 10);
+		box.set_box(-20, -1, 20, 10);
 
 		createGroundBox();
 		createBike();
@@ -112,6 +163,9 @@ public:
 			rotate(-body->GetAngle())
 		;
 
+		if (body->GetFixtureList() == 0) return;
+		if (body->GetFixtureList()->GetType() != b2Shape::e_polygon) return;
+
 		b2PolygonShape* polygon = ((b2PolygonShape*)body->GetFixtureList()->GetShape());
 
 		glBegin(GL_LINE_LOOP);
@@ -126,15 +180,13 @@ public:
 	void render() {
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-		renderBody(box.get_transformation(), wheel1);
-		renderBody(box.get_transformation(), wheel2);
-		renderBody(box.get_transformation(), chassis);
+		for (b2Body* body = world.GetBodyList(); body != 0; body = body->GetNext()) {
+			renderBody(box.get_transformation(), body);
+		}
 	}
 
 	void tick_10ms() {
-		//ang += 0.01;
-
-		if (acc.val()) wheel1->ApplyTorque(-50.);
+		if (acc.val()) wheel1->ApplyTorque(-100.);
 
 		float32 timeStep = 10. / 1000.;
 		int32 velocityIterations = 10;
