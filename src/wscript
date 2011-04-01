@@ -10,5 +10,8 @@ def build(bld):
 		source=sources,
 		target='test-box2d-ymse',
 		defines=[],
+		includes=['/home/mag/Downloads/Box2D_v2.1.2/Box2D/Box2D'],
+		libpath=['/home/mag/Downloads/Box2D_v2.1.2/Box2D/Box2D'],
+		lib=['Box2D'],
 		use=['ymse'],
 	)
