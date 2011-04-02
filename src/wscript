@@ -8,6 +8,6 @@ def build(bld):
 
 	obj = bld.program(
 		source=sources,
-		target='test-box2d-ymse',
+		target='hilastomania',
 		use=['Box2D_inc', 'Box2D', 'ymse'],
 	)
