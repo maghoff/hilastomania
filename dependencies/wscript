@@ -19,7 +19,7 @@ def build(bld):
 		None
 	)
 
-	obj = bld.shlib(
+	obj = bld.stlib(
 		source=sources,
 		target='Box2D',
 	)

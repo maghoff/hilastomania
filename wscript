@@ -15,9 +15,35 @@ def configure(conf):
 		print "Failed to load pymse.wafutil. Bailing out"
 		sys.exit(1)
 
-	wafutil.do_some_configuration(conf)
+
+	wafutil.msvc_initial_setup(conf.env)
+
+	conf.load('compiler_cxx')
+
+	cc = wafutil.get_compiler_configurator(conf)
+
+	cc.sane_default(conf.env)
+	cc.many_warnings(conf.env)
+
+	# Box2D gets some warnings.
+	#cc.warnings_as_errors(conf.env)
+
+	core_env = conf.env.derive()
+
+	debug_env = core_env.derive()
+	cc.debug_mode(debug_env)
+	conf.setenv('debug', env = debug_env)
+
+	release_env = core_env.derive()
+	cc.release_mode(release_env)
+	cc.optimize(release_env)
+	cc.link_time_code_generation(release_env)
+	conf.setenv('release', env = release_env)
+
+	wafutil.configure_ymse(debug_env, release_env)
 
 	dependencies.do_import()
+	dependencies.configure(debug_env, release_env)
 
 
 def core_build(bld):
