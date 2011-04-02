@@ -7,7 +7,7 @@ def options(opt):
 
 
 def configure(conf):
-	import os, sys
+	import os, sys, dependencies
 	try:
 		sys.path.append(os.environ['YMSE_PATH'])
 		import pymse.wafutil as wafutil
@@ -16,6 +16,8 @@ def configure(conf):
 		sys.exit(1)
 
 	wafutil.do_some_configuration(conf)
+
+	dependencies.do_import()
 
 
 def core_build(bld):

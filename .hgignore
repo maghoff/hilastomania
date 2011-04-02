@@ -6,3 +6,4 @@ build
 .lock-wafbuild
 test-box2d-ymse.*
 Makefile
+dependencies/Box2D_v2.1.2
