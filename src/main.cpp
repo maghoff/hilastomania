@@ -33,9 +33,20 @@ class Game : public ymse::game {
 		groundBody = world.CreateBody(&groundBodyDef);
 
 		b2PolygonShape groundBox;
-		groundBox.SetAsBox(50, 10);
+		groundBox.SetAsBox(50, 2);
 
 		groundBody->CreateFixture(&groundBox, 0);
+
+
+		b2BodyDef airBodyDef;
+		airBodyDef.position.Set(30, -7);
+
+		b2Body* airBody = world.CreateBody(&airBodyDef);
+
+		b2PolygonShape airBox;
+		airBox.SetAsBox(2, 0.5);
+
+		airBody->CreateFixture(&airBox, 0);
 	}
 
 	b2Body* createWheel(float x, float y) {
@@ -51,7 +62,7 @@ class Game : public ymse::game {
 		b2FixtureDef fixtureDef;
 		fixtureDef.shape = &shape;
 		fixtureDef.density = 3;
-		fixtureDef.friction = 10.3;
+		fixtureDef.friction = 5.3;
 
 		body->CreateFixture(&fixtureDef);
 
@@ -121,11 +132,10 @@ class Game : public ymse::game {
 
 		b2RevoluteJointDef rDef;
 		rDef.Initialize(hinge, wheel, wpos);
-		rDef.lowerAngle = 0;
-		rDef.upperAngle = 0;
 		rDef.motorSpeed = 0;
-		rDef.maxMotorTorque = 10;
+		rDef.maxMotorTorque = 1000.;
 		rDef.enableLimit = false;
+		rDef.enableMotor = false;
 		return (b2RevoluteJoint*)world.CreateJoint(&rDef);
 	}
 
@@ -141,8 +151,8 @@ class Game : public ymse::game {
 	}
 
 	void breaks(bool on) {
-		hinge1->EnableLimit(on);
-		hinge2->EnableLimit(on);
+		hinge1->EnableMotor(on);
+		hinge2->EnableMotor(on);
 	}
 
 public:
@@ -220,10 +230,25 @@ public:
 		for (b2Body* body = world.GetBodyList(); body != 0; body = body->GetNext()) {
 			renderBody(box.get_transformation(), body);
 		}
+
+		matrix33f m = box.get_transformation();
+		for (b2Joint* joint = world.GetJointList(); joint != 0; joint = joint->GetNext()) {
+			b2Vec2 a = joint->GetAnchorA();
+			b2Vec2 b = joint->GetAnchorB();
+			glBegin(GL_LINES);
+
+			vec3f a_tr = m * vec3f(a.x, a.y, 1);
+			glVertex2f(a_tr[0], a_tr[1]);
+
+			vec3f b_tr = m * vec3f(b.x, b.y, 1);
+			glVertex2f(b_tr[0], b_tr[1]);
+
+			glEnd();
+		}
 	}
 
 	void tick_10ms() {
-		if (acc.val()) wheel1->ApplyTorque(-100.);
+		if (acc.val()) wheel1->ApplyTorque(-50.);
 
 		float32 timeStep = 10. / 1000.;
 		int32 velocityIterations = 10;
