@@ -150,7 +150,7 @@ class Game : public ymse::game {
 		hinge2 = connectWheel(chassis, wheel2, b2Vec2( 1, 4));
 	}
 
-	void breaks(bool on) {
+	void brakes(bool on) {
 		hinge1->EnableMotor(on);
 		hinge2->EnableMotor(on);
 	}
@@ -168,7 +168,7 @@ public:
 		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&b2Body::ApplyAngularImpulse, chassis, 100));
 		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&b2Body::ApplyAngularImpulse, chassis, -100));
 
-		keyboard.bind(ymse::KEY_DOWN, boost::bind(&Game::breaks, this, _1));
+		keyboard.bind(ymse::KEY_DOWN, boost::bind(&Game::brakes, this, _1));
 	}
 
 	~Game() { }
