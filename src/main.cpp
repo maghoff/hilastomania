@@ -10,7 +10,7 @@
 #include <ymse/matrix2d_homogenous.hpp>
 #include <ymse/vec.hpp>
 
-#include <Box2D.h>
+#include <Box2D/Box2D.h>
 
 using namespace ymse;
 using namespace ymse::matrix2d::homogenous;

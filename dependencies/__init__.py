@@ -16,7 +16,7 @@ BOX2D = {
 	"uri": "http://box2d.googlecode.com/files/Box2D_v2.1.2.zip",
 	"target_path": "",
 	"is_installed": Exists("Box2D_v2.1.2"),
-	"includes": "Box2D_v2.1.2/Box2D/Box2D"
+	"includes": "Box2D_v2.1.2/Box2D"
 }
 
 PACKAGES = [ BOX2D ]

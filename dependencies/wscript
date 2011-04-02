@@ -22,4 +22,5 @@ def build(bld):
 	obj = bld.stlib(
 		source=sources,
 		target='Box2D',
+		use='Box2D_inc',
 	)
