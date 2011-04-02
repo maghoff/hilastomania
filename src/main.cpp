@@ -16,6 +16,21 @@ using namespace ymse;
 using namespace ymse::matrix2d::homogenous;
 
 
+class Wheel {
+public:
+	b2Body *hinge, *wheel;
+	b2RevoluteJoint *motor;
+};
+
+class Bike {
+public:
+	b2Body* chassis;
+
+	Wheel wheel[2];
+
+};
+
+
 class Game : public ymse::game {
 	ymse::bindable_keyboard_handler keyboard;
 	ymse::box_reshaper box;
@@ -23,8 +38,8 @@ class Game : public ymse::game {
 	ymse::key acc;
 
 	b2World world;
-	b2Body *groundBody, *wheel1, *wheel2, *chassis;
-	b2RevoluteJoint *hinge1, *hinge2;
+	b2Body *groundBody;
+	Bike bike;
 
 	void createGroundBox() {
 		b2BodyDef groundBodyDef;
@@ -142,17 +157,17 @@ class Game : public ymse::game {
 	void createBike() {
 		createWheel(-2, 1);
 
-		wheel1 = createWheel(-2, 3);
-		wheel2 = createWheel( 2, 3);
-		chassis = createChassis(0, 5);
+		bike.wheel[0].wheel = createWheel(-2, 3);
+		bike.wheel[1].wheel = createWheel( 2, 3);
+		bike.chassis = createChassis(0, 5);
 
-		hinge1 = connectWheel(chassis, wheel1, b2Vec2(-1, 4));
-		hinge2 = connectWheel(chassis, wheel2, b2Vec2( 1, 4));
+		bike.wheel[0].motor = connectWheel(bike.chassis, bike.wheel[0].wheel, b2Vec2(-1, 4));
+		bike.wheel[1].motor = connectWheel(bike.chassis, bike.wheel[1].wheel, b2Vec2( 1, 4));
 	}
 
 	void brakes(bool on) {
-		hinge1->EnableMotor(on);
-		hinge2->EnableMotor(on);
+		bike.wheel[0].motor->EnableMotor(on);
+		bike.wheel[1].motor->EnableMotor(on);
 	}
 
 public:
@@ -165,8 +180,8 @@ public:
 		createGroundBox();
 		createBike();
 
-		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&b2Body::ApplyAngularImpulse, chassis, 100));
-		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&b2Body::ApplyAngularImpulse, chassis, -100));
+		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&b2Body::ApplyAngularImpulse, bike.chassis, 100));
+		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&b2Body::ApplyAngularImpulse, bike.chassis, -100));
 
 		keyboard.bind(ymse::KEY_DOWN, boost::bind(&Game::brakes, this, _1));
 	}
@@ -248,7 +263,7 @@ public:
 	}
 
 	void tick_10ms() {
-		if (acc.val()) wheel1->ApplyTorque(-50.);
+		if (acc.val()) bike.wheel[0].wheel->ApplyTorque(-50.);
 
 		float32 timeStep = 10. / 1000.;
 		int32 velocityIterations = 10;
