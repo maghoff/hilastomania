@@ -21,6 +21,7 @@ def configure(conf):
 
 
 def core_build(bld):
+	bld.add_subdirs('dependencies')
 	bld.add_subdirs('src')
 
 

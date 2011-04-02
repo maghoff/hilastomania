@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+
+import os
+from fnmatch import fnmatch
+
+def build(bld):
+	curdir = 'dependencies'
+	srcdir = os.path.join(curdir, 'Box2D_v2.1.2/Box2D/Box2D')
+	sources = []
+
+	os.path.walk(
+		srcdir,
+		lambda arg, dirname, fnames:
+			sources.extend(
+				os.path.join(dirname[len(curdir)+1:], fn)
+				for fn in fnames
+				if fnmatch(fn, '*.cpp')
+			),
+		None
+	)
+
+	obj = bld.shlib(
+		source=sources,
+		target='Box2D',
+	)
