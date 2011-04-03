@@ -6,6 +6,7 @@
 #include <ymse/bindable_keyboard_handler.hpp>
 #include <ymse/keycodes.hpp>
 #include <ymse/key.hpp>
+#include <ymse/mouse_handler.hpp>
 #include <ymse/box_reshaper.hpp>
 #include <ymse/matrix2d_homogenous.hpp>
 #include <ymse/vec.hpp>
@@ -14,16 +15,21 @@
 #include "box2d_util.hpp"
 
 
-class Game : public ymse::game {
+
+
+class Game : public ymse::game, ymse::reshaper {
 	ymse::bindable_keyboard_handler keyboard;
 	ymse::box_reshaper box;
 
 	ymse::key acc;
 
 	b2World world;
+	b2Body* groundBody;
 	Bike bike;
 
-	void createGroundBox() {
+	box2d_util::mouse_handler mouse;
+
+	static b2Body* createGroundBody(b2World& world) {
 		b2BodyDef groundBodyDef;
 		groundBodyDef.position.Set(0, -10);
 
@@ -44,17 +50,34 @@ class Game : public ymse::game {
 		airBox.SetAsBox(2, 0.5);
 
 		airBody->CreateFixture(&airBox, 0);
+
+		return groundBody;
+	}
+
+	void reshape(int width, int height) {
+		using namespace ymse::matrix2d::homogenous;
+
+		box.reshape(width, height);
+
+		ymse::matrix33f pixel_to_window =
+			scale(1, -1) *
+			translate(-1, -1) *
+			scale(2/(double)width, 2/(double)height);
+
+		mouse.pixel_to_world =
+			box.get_inverse_transformation() *
+			pixel_to_window;
 	}
 
 public:
 	Game() :
 		acc(keyboard, ymse::KEY_UP),
 		world(b2Vec2(0, -10), true),
-		bike(world, 0, 5)
+		groundBody(createGroundBody(world)),
+		bike(world, 0, 5),
+		mouse(world, groundBody)
 	{
 		box.set_box(-10, -1, 70, 10);
-
-		createGroundBox();
 
 		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&Bike::apply_rotation, &bike, 1));
 		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&Bike::apply_rotation, &bike, -1));
@@ -70,7 +93,8 @@ public:
 
 		core.set_game_object(this);
 		core.set_keyboard_handler(&keyboard);
-		core.set_reshaper_object(&box);
+		core.set_mouse_handler(&mouse);
+		core.set_reshaper_object(this);
 	}
 
 	void render() {

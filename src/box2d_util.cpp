@@ -73,4 +73,82 @@ void renderWorld(b2World& world, const ymse::matrix33f& m) {
 	}
 }
 
+// From Box2D Testbed:
+struct QueryCallback : public b2QueryCallback {
+	QueryCallback(const b2Vec2& point) {
+		m_point = point;
+		m_fixture = NULL;
+	}
+
+	bool ReportFixture(b2Fixture* fixture) {
+		b2Body* body = fixture->GetBody();
+		if (body->GetType() == b2_dynamicBody) {
+			bool inside = fixture->TestPoint(m_point);
+			if (inside) {
+				m_fixture = fixture;
+
+				// We are done, terminate the query.
+				return false;
+			}
+		}
+
+		// Continue the query.
+		return true;
+	}
+
+	b2Vec2 m_point;
+	b2Fixture* m_fixture;
+};
+
+mouse_handler::mouse_handler(b2World& world_, b2Body* ground_body_) :
+	world(world_),
+	ground_body(ground_body_),
+	mouse_joint(0)
+{
+}
+
+void mouse_handler::mouse_motion(int dx, int dy, int x, int y) {
+	if (mouse_joint) {
+		ymse::vec3f mouse = pixel_to_world * ymse::vec3f(x, y, 1);
+		b2Vec2 p(mouse[0], mouse[1]);
+		mouse_joint->SetTarget(p);
+	}
+}
+
+void mouse_handler::mouse_button_down(int button, int x, int y) {
+	if (button == 1) {
+		ymse::vec3f mouse = pixel_to_world * ymse::vec3f(x, y, 1);
+		b2Vec2 p(mouse[0], mouse[1]);
+
+		// Make a small box.
+		b2AABB aabb;
+		b2Vec2 d;
+		d.Set(0.001f, 0.001f);
+		aabb.lowerBound = p - d;
+		aabb.upperBound = p + d;
+
+		// Query the world for overlapping shapes.
+		QueryCallback callback(p);
+		world.QueryAABB(&callback, aabb);
+
+		if (callback.m_fixture) {
+			b2Body* body = callback.m_fixture->GetBody();
+			b2MouseJointDef md;
+			md.bodyA = ground_body;
+			md.bodyB = body;
+			md.target = p;
+			md.maxForce = 1000.0f * body->GetMass();
+			mouse_joint = (b2MouseJoint*)world.CreateJoint(&md);
+			body->SetAwake(true);
+		}
+	}
+}
+
+void mouse_handler::mouse_button_up(int button, int x, int y) {
+	if (button == 1 && mouse_joint) {
+		world.DestroyJoint(mouse_joint);
+		mouse_joint = 0;
+	}
+}
+
 }
