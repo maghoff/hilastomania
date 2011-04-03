@@ -6,15 +6,12 @@
 #include <ymse/bindable_keyboard_handler.hpp>
 #include <ymse/keycodes.hpp>
 #include <ymse/key.hpp>
-#include <ymse/mouse_handler.hpp>
 #include <ymse/box_reshaper.hpp>
 #include <ymse/matrix2d_homogenous.hpp>
 #include <ymse/vec.hpp>
 #include <Box2D/Box2D.h>
 #include "bike.hpp"
 #include "box2d_util.hpp"
-
-
 
 
 class Game : public ymse::game, ymse::reshaper {
