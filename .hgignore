@@ -4,6 +4,10 @@ build
 *.pyc
 *~
 .lock-wafbuild
-test-box2d-ymse.*
+*.config
+*.creator
+*.creator.user*
+*.files
+*.includes
 Makefile
 dependencies/Box2D_v2.1.2
