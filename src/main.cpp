@@ -16,52 +16,35 @@ using namespace ymse;
 using namespace ymse::matrix2d::homogenous;
 
 
-class Wheel {
-public:
-	b2Body *hinge, *wheel;
-	b2RevoluteJoint *motor;
-};
-
 class Bike {
-public:
-	b2Body* chassis;
+	b2World& world;
 
+	struct Wheel {
+		b2Body *hinge, *wheel;
+		b2RevoluteJoint *motor;
+	};
+
+	b2Body* chassis;
 	Wheel wheel[2];
 
-};
+	b2Body* createChassis(float x, float y) {
+		b2BodyDef bodyDef;
+		bodyDef.type = b2_dynamicBody;
+		bodyDef.position.Set(x, y);
+		bodyDef.angle = 0;
+		b2Body* body = world.CreateBody(&bodyDef);
 
+		b2PolygonShape dynamicBox;
+		dynamicBox.SetAsBox(2, 1);
 
-class Game : public ymse::game {
-	ymse::bindable_keyboard_handler keyboard;
-	ymse::box_reshaper box;
+		b2FixtureDef fixtureDef;
+		fixtureDef.shape = &dynamicBox;
+		fixtureDef.density = 2;
+		fixtureDef.friction = 0.003;
 
-	ymse::key acc;
+		body->CreateFixture(&fixtureDef);
 
-	b2World world;
-	b2Body *groundBody;
-	Bike bike;
-
-	void createGroundBox() {
-		b2BodyDef groundBodyDef;
-		groundBodyDef.position.Set(0, -10);
-
-		groundBody = world.CreateBody(&groundBodyDef);
-
-		b2PolygonShape groundBox;
-		groundBox.SetAsBox(50, 2);
-
-		groundBody->CreateFixture(&groundBox, 0);
-
-
-		b2BodyDef airBodyDef;
-		airBodyDef.position.Set(30, -7);
-
-		b2Body* airBody = world.CreateBody(&airBodyDef);
-
-		b2PolygonShape airBox;
-		airBox.SetAsBox(2, 0.5);
-
-		airBody->CreateFixture(&airBox, 0);
+		return body;
 	}
 
 	b2Body* createWheel(float x, float y) {
@@ -104,26 +87,6 @@ class Game : public ymse::game {
 		return body;
 	}
 
-	b2Body* createChassis(float x, float y) {
-		b2BodyDef bodyDef;
-		bodyDef.type = b2_dynamicBody;
-		bodyDef.position.Set(x, y);
-		bodyDef.angle = 0;
-		b2Body* body = world.CreateBody(&bodyDef);
-
-		b2PolygonShape dynamicBox;
-		dynamicBox.SetAsBox(2, 1);
-
-		b2FixtureDef fixtureDef;
-		fixtureDef.shape = &dynamicBox;
-		fixtureDef.density = 2;
-		fixtureDef.friction = 0.003;
-
-		body->CreateFixture(&fixtureDef);
-
-		return body;
-	}
-
 	b2RevoluteJoint* connectWheel(b2Body* chassis, b2Body* wheel, const b2Vec2& pos) {
 		const b2Vec2& wpos = wheel->GetWorldCenter();
 
@@ -154,36 +117,81 @@ class Game : public ymse::game {
 		return (b2RevoluteJoint*)world.CreateJoint(&rDef);
 	}
 
-	void createBike() {
-		createWheel(-2, 1);
+public:
+	Bike(b2World& world_, float x, float y) :
+		world(world_)
+	{
+		chassis = createChassis(x, y);
 
-		bike.wheel[0].wheel = createWheel(-2, 3);
-		bike.wheel[1].wheel = createWheel( 2, 3);
-		bike.chassis = createChassis(0, 5);
+		wheel[0].wheel = createWheel(x-2, y-2);
+		wheel[0].motor = connectWheel(chassis, wheel[0].wheel, b2Vec2(x-1, y-1));
 
-		bike.wheel[0].motor = connectWheel(bike.chassis, bike.wheel[0].wheel, b2Vec2(-1, 4));
-		bike.wheel[1].motor = connectWheel(bike.chassis, bike.wheel[1].wheel, b2Vec2( 1, 4));
+		wheel[1].wheel = createWheel(x+2, y-2);
+		wheel[1].motor = connectWheel(chassis, wheel[1].wheel, b2Vec2(x+1, y-1));
 	}
 
 	void brakes(bool on) {
-		bike.wheel[0].motor->EnableMotor(on);
-		bike.wheel[1].motor->EnableMotor(on);
+		wheel[0].motor->EnableMotor(on);
+		wheel[1].motor->EnableMotor(on);
+	}
+
+	void apply_acceleration() {
+		wheel[0].wheel->ApplyTorque(-50.);
+	}
+
+	void apply_rotation(int direction) {
+		chassis->ApplyAngularImpulse(100 * direction);
+	}
+};
+
+
+class Game : public ymse::game {
+	ymse::bindable_keyboard_handler keyboard;
+	ymse::box_reshaper box;
+
+	ymse::key acc;
+
+	b2World world;
+	b2Body *groundBody;
+	Bike bike;
+
+	void createGroundBox() {
+		b2BodyDef groundBodyDef;
+		groundBodyDef.position.Set(0, -10);
+
+		groundBody = world.CreateBody(&groundBodyDef);
+
+		b2PolygonShape groundBox;
+		groundBox.SetAsBox(50, 2);
+
+		groundBody->CreateFixture(&groundBox, 0);
+
+
+		b2BodyDef airBodyDef;
+		airBodyDef.position.Set(30, -7);
+
+		b2Body* airBody = world.CreateBody(&airBodyDef);
+
+		b2PolygonShape airBox;
+		airBox.SetAsBox(2, 0.5);
+
+		airBody->CreateFixture(&airBox, 0);
 	}
 
 public:
 	Game() :
 		acc(keyboard, ymse::KEY_UP),
-		world(b2Vec2(0, -10), true)
+		world(b2Vec2(0, -10), true),
+		bike(world, 0, 5)
 	{
 		box.set_box(-10, -1, 70, 10);
 
 		createGroundBox();
-		createBike();
 
-		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&b2Body::ApplyAngularImpulse, bike.chassis, 100));
-		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&b2Body::ApplyAngularImpulse, bike.chassis, -100));
+		keyboard.bind_pressed(ymse::KEY_LEFT, boost::bind(&Bike::apply_rotation, &bike, 1));
+		keyboard.bind_pressed(ymse::KEY_RIGHT, boost::bind(&Bike::apply_rotation, &bike, -1));
 
-		keyboard.bind(ymse::KEY_DOWN, boost::bind(&Game::brakes, this, _1));
+		keyboard.bind(ymse::KEY_DOWN, boost::bind(&Bike::brakes, &bike, _1));
 	}
 
 	~Game() { }
@@ -263,7 +271,7 @@ public:
 	}
 
 	void tick_10ms() {
-		if (acc.val()) bike.wheel[0].wheel->ApplyTorque(-50.);
+		if (acc.val()) bike.apply_acceleration();
 
 		float32 timeStep = 10. / 1000.;
 		int32 velocityIterations = 10;
