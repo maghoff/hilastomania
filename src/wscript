@@ -4,6 +4,7 @@
 def build(bld):
 	sources = [
 		'main.cpp',
+		'bike.cpp',
 	]
 
 	obj = bld.program(
