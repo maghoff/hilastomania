@@ -11,9 +11,7 @@
 #include <ymse/vec.hpp>
 #include <Box2D/Box2D.h>
 #include "bike.hpp"
-
-using namespace ymse;
-using namespace ymse::matrix2d::homogenous;
+#include "box2d_util.hpp"
 
 
 class Game : public ymse::game {
@@ -23,14 +21,13 @@ class Game : public ymse::game {
 	ymse::key acc;
 
 	b2World world;
-	b2Body *groundBody;
 	Bike bike;
 
 	void createGroundBox() {
 		b2BodyDef groundBodyDef;
 		groundBodyDef.position.Set(0, -10);
 
-		groundBody = world.CreateBody(&groundBodyDef);
+		b2Body* groundBody = world.CreateBody(&groundBodyDef);
 
 		b2PolygonShape groundBox;
 		groundBox.SetAsBox(50, 2);
@@ -76,69 +73,10 @@ public:
 		core.set_reshaper_object(&box);
 	}
 
-	void renderPolygon(b2PolygonShape* polygon, const ymse::matrix33f& m) {
-		glBegin(GL_LINE_LOOP);
-		for (int i=0; i<polygon->GetVertexCount(); ++i) {
-			const b2Vec2& v = polygon->GetVertex(i);
-			vec3f v_tr = m * vec3f(v.x, v.y, 1);
-			glVertex2f(v_tr[0], v_tr[1]);
-		}
-		glEnd();
-	}
-
-	void renderCircle(b2CircleShape* circle, const ymse::matrix33f& m) {
-		glBegin(GL_LINE_STRIP);
-		float r = circle->m_radius;
-
-		vec3f center = m * vec3f(0, 0, 1);
-		glVertex2f(center[0], center[1]);
-
-		const int n = 50;
-		for (int i=0; i<=n; ++i) {
-			float a = i * 2.*M_PI / (float)n;
-			vec3f v_tr = m * vec3f(cos(a)*r, sin(a)*r, 1);
-			glVertex2f(v_tr[0], v_tr[1]);
-		}
-
-		glEnd();
-	}
-
-	void renderBody(const ymse::matrix33f& transformation, b2Body* body) {
-		matrix33f m =
-			transformation *
-			translate(body->GetPosition().x, body->GetPosition().y) *
-			rotate(-body->GetAngle())
-		;
-
-		for (b2Fixture* f = body->GetFixtureList(); f != 0; f = f->GetNext()) {
-			b2Shape* sh = f->GetShape();
-			b2Shape::Type t = sh->GetType();
-			if (t == b2Shape::e_polygon) renderPolygon((b2PolygonShape*)sh, m);
-			else if (t == b2Shape::e_circle) renderCircle((b2CircleShape*)sh, m);
-		}
-	}
-
 	void render() {
 		glClear(GL_DEPTH_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
 
-		for (b2Body* body = world.GetBodyList(); body != 0; body = body->GetNext()) {
-			renderBody(box.get_transformation(), body);
-		}
-
-		matrix33f m = box.get_transformation();
-		for (b2Joint* joint = world.GetJointList(); joint != 0; joint = joint->GetNext()) {
-			b2Vec2 a = joint->GetAnchorA();
-			b2Vec2 b = joint->GetAnchorB();
-			glBegin(GL_LINES);
-
-			vec3f a_tr = m * vec3f(a.x, a.y, 1);
-			glVertex2f(a_tr[0], a_tr[1]);
-
-			vec3f b_tr = m * vec3f(b.x, b.y, 1);
-			glVertex2f(b_tr[0], b_tr[1]);
-
-			glEnd();
-		}
+		box2d_util::renderWorld(world, box.get_transformation());
 	}
 
 	void tick_10ms() {
